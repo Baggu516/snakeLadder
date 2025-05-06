@@ -1,27 +1,81 @@
-let currentPlayer = 1;
+let currentPlayer = Math.random() < 0.5 ? 1 : 2;
 let messageDiv = document.createElement("div");
 document.querySelector(".dice-div").appendChild(messageDiv);
+
+// 🎵 Sound setup
+const diceSound = new Audio("diceSound.mp3");
+const ladderSound = new Audio("ladderSound.mp3");
+const snakeSound = new Audio("snakeSound.mp3");
 
 let playerOneDiv = document.createElement("div");
 playerOneDiv.style.height = "10px";
 playerOneDiv.style.width = "10px";
 playerOneDiv.style.backgroundColor = "red";
 let playerOneCount = 0;
+let playerOneStarted = false;
 
 let playerTwoDiv = document.createElement("div");
 playerTwoDiv.style.height = "10px";
 playerTwoDiv.style.width = "10px";
 playerTwoDiv.style.backgroundColor = "blue";
 let playerTwoCount = 0;
+let playerTwoStarted = false;
 
 function updateMessage(msg) {
   messageDiv.textContent = msg;
 }
 
 function rollDice() {
+  const dice = document.getElementById("dice");
+  dice.classList.add("dice-roll");
   const diceNumber = Math.floor(Math.random() * 6) + 1;
-  document.getElementById("dice").src = `dice${diceNumber}.svg`;
+  dice.src = `dice${diceNumber}.svg`;
+
+  // 🔊 Play dice roll sound
+  diceSound.play();
+
+  setTimeout(() => {
+    dice.classList.remove("dice-roll");
+  }, 100);
+
   return diceNumber;
+}
+
+function applySnakesAndLadders(position, player) {
+  const transitions = {
+    4: 25,
+    9: 30,
+    20: 41,
+    28: 84,
+    40: 59,
+    63: 81,
+    71: 91,
+    17: 7,
+    47: 26,
+    54: 34,
+    62: 19,
+    64: 60,
+    87: 24,
+    93: 73,
+    95: 75,
+    99: 78,
+  };
+
+  if (transitions[position]) {
+    const newPosition = transitions[position];
+
+    if (newPosition > position) {
+      ladderSound.play();
+      updateMessage(`Player ${player} found a ladder to ${newPosition}!`);
+    } else {
+      snakeSound.play();
+      updateMessage(`Oh no! Player ${player} got bitten by a snake down to ${newPosition}.`);
+    }
+
+    return newPosition;
+  }
+
+  return position;
 }
 
 function playerOneRoll() {
@@ -30,13 +84,25 @@ function playerOneRoll() {
   let roll = rollDice();
   updateMessage(`Player 1 rolled a ${roll}`);
 
+  if (!playerOneStarted) {
+    if (roll === 1) {
+      playerOneStarted = true;
+      playerOneCount = 1;
+      let title = document.querySelector(`.title${playerOneCount}`);
+      title.appendChild(playerOneDiv);
+      updateMessage("Player 1 enters the game with a 1! Roll again.");
+    } else {
+      currentPlayer = 2;
+      updateMessage("Player 1 needs a 1 to start. Player 2's turn.");
+    }
+    return;
+  }
+
   if (playerOneCount + roll <= 100) {
     playerOneCount += roll;
   }
 
-  // Snakes & Ladders
-  if (playerOneCount === 30) playerOneCount -= 29;
-  if (playerOneCount === 4) playerOneCount += 21;
+  playerOneCount = applySnakesAndLadders(playerOneCount, 1);
 
   let title = document.querySelector(`.title${playerOneCount}`);
   title.appendChild(playerOneDiv);
@@ -56,15 +122,25 @@ function playerTwoRoll() {
   let roll = rollDice();
   updateMessage(`Player 2 rolled a ${roll}`);
 
+  if (!playerTwoStarted) {
+    if (roll === 1) {
+      playerTwoStarted = true;
+      playerTwoCount = 1;
+      let title = document.querySelector(`.title${playerTwoCount}`);
+      title.appendChild(playerTwoDiv);
+      updateMessage("Player 2 enters the game with a 1! Roll again.");
+    } else {
+      currentPlayer = 1;
+      updateMessage("Player 2 needs a 1 to start. Player 1's turn.");
+    }
+    return;
+  }
+
   if (playerTwoCount + roll <= 100) {
     playerTwoCount += roll;
   }
 
-  // Snakes & Ladders
-  if (playerTwoCount === 30) playerTwoCount -= 29;
-  if (playerTwoCount === 4) playerTwoCount += 21;
-  if (playerTwoCount === 17) playerTwoCount -= 10;
-  if (playerTwoCount === 9) playerTwoCount += 21;
+  playerTwoCount = applySnakesAndLadders(playerTwoCount, 2);
 
   let title = document.querySelector(`.title${playerTwoCount}`);
   title.appendChild(playerTwoDiv);
@@ -77,3 +153,8 @@ function playerTwoRoll() {
   currentPlayer = 1;
   updateMessage("Player 1's turn.");
 }
+
+// Initial game message
+updateMessage(
+  `Game started. Player ${currentPlayer}'s turn. Roll a 1 to enter.`
+);
